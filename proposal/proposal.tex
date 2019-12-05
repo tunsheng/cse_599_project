@@ -1,0 +1,64 @@
+\documentclass{article}
+\usepackage[final,nonatbib]{neurips_2018}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage[backref=false,pagebackref=false]{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2,
+\usepackage{microtype}      % microtypography
+\usepackage{graphicx}
+\usepackage[english]{babel}
+\usepackage[numbers]{natbib}
+\bibliographystyle{unsrtnat}
+\usepackage{citeref}
+
+%\usepackage{cite}
+% \usepackage[utf8]{inputenc}
+% \usepackage{algorithm}
+% \usepackage{algorithmicx}
+% \usepackage{algpseudocode}
+% \usepackage{amssymb}
+% \usepackage[backend=bibtex,sorting=none]{biblatex}
+% \bibliography{references}  % with biblatex
+
+
+\title{CSE 599 G1 Project Proposal\\Mangafy: Style Transfer from manga to image}
+\author{%
+Tun Sheng Tan\\
+netid: tunsheng\\
+\texttt{tunsheng@uw.edu}
+}
+\begin{document}
+\maketitle
+
+Manga is a popular form of reading around the world with its captivating story and arty style. It takes talent and experience to create the aesthetic which is in exccessible to manjority of the population. To be able to provide the tool to convert images into manga scene could potentially enable a way of creating manga content.
+
+  The available neural art style transfer does not do a good job at transfering the style from a manga scene to a real image. An example of manga style transfer using DeepArt \cite{deepart} is shown in Figure \ref{fig:deepart}. The app is able to transfer the texture from the hair and clothe correctly but the skin and eye texture are left to be desired.
+
+\begin{figure}[b]
+  \includegraphics[width=\textwidth]{figure/deepart.png}
+  \caption{Example of style transfer using DeepArt with two scenes from two different mangas \cite{deepart} applied to a portrait image. (Right) Input style (Middle) Input image (Left) Output}
+  \label{fig:deepart}
+\end{figure}
+
+CartoonGAN \cite{CartoonGAN} and ComixGAN \cite{ComixGAN} shows very promising results in transfering cartoon style to images and videos due to the specialized training dataset. Inspired by that, we set out to build a style transfer neural network using a database of a modest size of 10k that we will scrapp from a image repo \url{https://danbooru.donmai.us}. If time permits, we will persue a segmentation based style transfer which can take an effort to assemble and train two networks given the time constraint. Finally, we would like to deploy this as an web app to share it with the rest of the manga fans.
+
+In terms of implementation, we would like to adapt the generative-adversarial network (GAN) mentioned above, to make realistic manga style images. The underlying network will be based off the VGG network with a sparsely regularized semantic content loss and a adversarial loss that preserve edge. Network architectures will be implemented with Tensorflow. We will use transfer learning to train our model with the pretrained models from the authors of ComixGAN ( \url{https://github.com/maciej3031/comixify} ).
+
+The following is a proposed timeline for this project:
+\begin{itemize}
+  \item Week 1: Scrapping manga images from \url{https://danbooru.donmai.us}
+  \item Week 2 and 3: Train a variant of ComixGAN on the manga images.
+  \item Week 4: Compare with DeepArt and deployment.
+\end{itemize}
+
+
+% \newpage
+% \printbibliography % For biblatex
+
+\medskip
+\bibliography{references} % for natbib
+\end{document}

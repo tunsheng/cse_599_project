@@ -1,0 +1,242 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage{amssymb}
+\usepackage[backend=bibtex,sorting=none]{biblatex}
+\usepackage{graphicx}
+\bibliography{references}
+
+\title{Interpretation of Jastrow Factor}
+\author{Tun Sheng Tan}
+\begin{document}
+\maketitle
+
+\section{Motivation}
+Normalizing flow is
+Albergo et al used this idea to improve the sampling method in Markov Chain Monte Carlo \cite{Albergo1904.12072}.
+\section{Variational Monte Carlo}
+The central problem in quantum mechanics is finding the ground state (GS) of a hamiltonian.
+The variational principle states that $E[\Psi]=E_{GS}$ iff $\Psi=\Psi_{GS}$ or more
+formally:
+\begin{equation}
+\min_{\Psi} E([\Psi]) = \frac{\langle \Psi | H|\Psi \rangle}{\langle \Psi | \Psi \rangle} \geq E_{GS}
+\end{equation}
+
+The computation of expectation of $H$ involves integral of high dimension depending on the
+problem. Evaluating it analytically can be impossible for many practical cases. Instead
+the multidimensional integral can be computed using a Monte Carlo integgration scheme which
+scales better with growing dimension than other quadrature techniques \cite{TOULOUSE2016285}.
+
+Using a change of basis to convert state vectors into wavefunction, we can express the
+problem in a more familiar form:
+\begin{eqnarray*}
+E[\Psi] &=& \frac{\langle \Psi | H|\Psi \rangle}{\langle \Psi | \Psi \rangle}\\
+        &=& \frac{\int dR\ \|\Psi(x)\|^2 \frac{H\Psi(R)}{\Psi(R)}}{\int dR\  \|\Psi(x)\|^2}\\
+        &=& \int dR\ \rho(R) E_{loc}(R)\\
+        &=& \bigg\langle E_{loc} \bigg\rangle_{\|\Psi\|^2}\\
+E_{loc}(R) &=& \frac{H\Psi(R)}{\Psi(R)}
+\end{eqnarray*}
+$E_{loc}$ is called the "local" energy. The locality refers to the "energy" associated to a particular point in the space of $R$. By the law of large numbers, the integral is simply an average of the $E_{loc}$ given a large enough sample size.
+\begin{eqnarray*}
+E[\Psi] &\approx& \frac{1}{N} \sum_{i=1}^{N} E_{loc}(R_i)
+\end{eqnarray*}
+If $E_{loc}$ is sampled randomly, then central limit theorem can guarantee that the average of $E_{loc}$ with respect to the sample approaches a gaussian distribution in a large sample size limit.
+Therefore, we can quantify the statistical uncertainty of our finite sampling size. [In practical implementation, samples are not identically independenlly distributed. Read \cite{TOULOUSE2016285} for more information on how to treat the uncertainty.]
+\begin{eqnarray*}
+\mathbb{E}[\bar{E}_{loc}] &=& \mathbb{E}[E_{loc}]\\
+\sigma^2[\bar{E}_{loc}] &=& \frac{1}{M}\sigma^2[E_{loc}]
+\end{eqnarray*}
+When $\Psi\rightarrow\Psi_{exact}$, the variance of $\bar{E}_{loc}$ will vanish. This is known as the
+zero-variance property and we can use this to define the termination point in our algorithm.
+
+A common wavefunction used has Jastrow-Slater form (product of an anti-symmetric term $\Phi$
+and a symmetric term to account for correlation $J(R)$). Usually $J(R)$ is taken to be an
+exponential $e^{f(R)}$.
+\begin{equation}
+\Psi(R) = J(R)\Phi(R)
+\end{equation}
+
+
+
+\section{Normalizing Flow}
+In probility theory, Radon-Nikodym theorem is used to transform a random variable integration problem
+into a normal integration problem. The main calculation involved in this machinery is the Jacobian.
+Finding the appropriate transformation can be difficult when we are dealing with a complicated probability density.
+
+In recent years, interest in Bayesian machine learning has resulted in a method
+called normalizing flow (NF) as a way to construct such mapping between two densities. NF is a sequence of invertible mappings \cite{Rezende:2015:VIN:3045118.3045281}. The main breakthrough is to cast the problem as an optimization problem involving non-linear functions with simple derivatives.
+
+Let $z \in \mathbb{R}$ to be a random variable with distribution $q(z)$. Suppose that
+$f:\mathbb{R}^d\rightarrow\mathbb{R}^d$ is invertible. Then,
+
+\begin{eqnarray}
+z'&=&f(z)\\
+q(z')&=&q(z) \bigg\| \textnormal{det} \frac{\partial f^{-1}(z')}{\partial z'} \bigg\|\nonumber\\
+     &=&q(z) \bigg\| \textnormal{det} \frac{\partial f(z)}{\partial z} \bigg\|^{-1}
+\end{eqnarray}
+
+When we apply the transformation repeatedly,
+\begin{eqnarray}
+z_K &=& f_K \circ f_{K-1} \circ ... \circ f_1(z_0)\\
+q(z_K) &=& q(z_0)   \prod_{j=1} \bigg\| \textnormal{det} \frac{\partial f_j(z_j)}{\partial z_j} \bigg\|^{-1}
+\end{eqnarray}
+
+A more convenient notation for $q(z_K)$ would be to express it in logarithm.
+\begin{eqnarray}
+\log\big(q(z_K)\big) &=& \log\big(q(z_0)\big) - \sum_{j=1}^K   \log \bigg\| \textnormal{det} \frac{\partial f_j(z_j)}{\partial z_j} \bigg\|
+\end{eqnarray}
+
+\subsection{Change-of-variable}
+How do we pick the transformation appropriate for our application ? For starter,
+we need something that is simple to compute but has non-linear action.
+
+A simple linear affine transformation is $f(z)=z+uh(w^Tz+b)$ where $h$ is some
+non-linear function. The derivative is simple to compute.
+
+\begin{equation}
+det \bigg\| \frac{\partial f(z)}{\partial z} \bigg\| = \big\| 1+u^T h'(w^Tz+b)w \big\|
+\end{equation}
+
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{normalizingflow.png}
+  \caption{Illustration of normalizing flow. A simple prior $r(z)$ can be transformed into a complex posterior $\tilde{p}_f$ by a sequence of mapping $g^{-1}_i$ \cite{Albergo1904.12072}.}
+\end{figure}
+
+
+\section{Main Results}
+Suppose that $x \in \mathbb{R}^d$. The local energy $E_{loc}(x)$ is a map from $\mathbb{R}^d\rightarrow\mathbb{R}$ is a random variable with distribution $\|\Psi\|^2$. $\|\Psi(x)\|^2$ is a map from $\mathbb{R}^d\rightarrow\mathbb{R}$.
+
+Suppose that $f:\mathbb{R} \rightarrow\mathbb{R}$ maps $E_{loc}^{HF}$ to $E_{loc}^{exact}$.
+Then, $f \circ E_{loc}$ maps $\mathbb{R}^d \rightarrow \mathbb{R}$.
+
+\begin{equation}
+q[E_{loc}^K(x)] = e^{ - \sum_{j=1}^K   \log \bigg\| \textnormal{det} \frac{\partial f_j[E_{loc}^j(x)]}{\partial E_{loc}^j(x)} \bigg\|} q[E_{loc}^{0}(x)]
+\end{equation}
+
+\begin{equation}
+\|\Psi_{exact}(x)\|^2 \approx e^{ - \sum_{j=1}^K   \log \bigg\| \textnormal{det} \frac{\partial f_j[E_{loc}^j(x)]}{\partial E_{loc}^j(x)} \bigg\|} \|\Psi_{HF}(x)\|^2
+\end{equation}
+
+
+If we let the exponent be $T$, we can cast this is a more familiar form.
+\begin{equation}
+\|\Psi_{exact}(x)\|^2 = e^{T(x)} \|\Psi_0(x)\|^2
+\end{equation}
+
+The expoential term can be thought as a Jastrow term introducing additional correlation
+to our original probability density.
+
+Now we can insert this into the variational Monte Carlo scheme. Instead of optimizing
+the weights of a wavefunction, we are now optimizing over the weights of operator $T$.
+
+% Compared to coupled cluster approach, we have to take derivative of simple linear function.
+% Also, there is a possibility of implementing automatic differentiation to speed up derivative calculation.
+
+One interesting fact about the change-of-variable function is that it acts on a scalar.
+Thus, the weights in which we optimize over are just scalars.
+
+Expectation of the local energy can be computed easily from a prior distribution by
+using of Law of Unconscious Statistician (LOTUS).
+\begin{equation}
+\mathbb{E}_{|\Psi|^2}\bigg[ \frac{H\Psi}{\Psi} \bigg] = \mathbb{E}_{|\Psi_0|^2}\bigg[ f\bigg( \frac{H\Psi}{\Psi}\bigg) \bigg]
+\end{equation}
+
+By choosing a simple non-linear transformation like the one mentioned above, the
+corrections to weights can be computed easily (can take advantage of automatic differentiation)
+using chain rule.
+\begin{eqnarray}
+\frac{\partial E}{\partial u} &=& \mathbb{E}_{|\Psi_0|^2}\bigg[\frac{\partial }{\partial u} f\bigg(\frac{H\Psi}{\Psi}\bigg) \bigg]\\
+\frac{\partial E}{\partial W} &=& \mathbb{E}_{|\Psi_0|^2}\bigg[\frac{\partial }{\partial W} f\bigg(\frac{H\Psi}{\Psi}\bigg) \bigg]\\
+\frac{\partial E}{\partial b} &=& \mathbb{E}_{|\Psi_0|^2}\bigg[\frac{\partial }{\partial b} f\bigg(\frac{H\Psi}{\Psi}\bigg) \bigg]
+\end{eqnarray}
+
+\begin{algorithm}
+  \caption{Naive Method}
+  \begin{algorithmic}
+    \Procedure{CVMC}{}
+      \State $N \gets$ Number of iterations
+      \State $\epsilon \gets$ Tolerance
+      \While{$i<N $ and $ \sigma^2 > \epsilon$}
+        \State $\mathbf{X} \gets$ Sample $\|\Psi_{HF}\|^2$
+        \State $E_{loc}^{HF}(\mathbf{X}) \gets \frac{H\Psi_{HF}(\mathbf{X})}{\Psi_{HF}(\mathbf{X})}$
+        \State $E_{loc}^{exact}(\mathbf{X}) \gets \sum_{i=1}^{K} f_i\bigg(E_{loc}^{HF}(\mathbf{X})\bigg)$
+        \State $\sigma^2 \gets \bigg\langle \bigg(E_{loc}^{exact}(\mathbf{X}) - \langle E_{loc}^{exact} \rangle \bigg)^2 \bigg\rangle$
+        \State \Call{Update Weights}{$u,\ W,\ b$}
+      \EndWhile
+      \State $\Psi_{exact} \gets \sqrt{e^{T(u,W,b)}\|\Psi_{HF}\|^2}$
+    \EndProcedure
+    \Statex
+    \Function{Update Weights}{$u,\ W,\ b$}
+      \State $u\gets u -\frac{\partial E}{\partial u}$
+      \State $W\gets W -\frac{\partial E}{\partial W}$
+      \State $b\gets b -\frac{\partial E}{\partial b}$
+      \State \Return $u,\ W,\ b$
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+  \caption{Correct Method}
+  \begin{algorithmic}
+    \Procedure{CVMC}{}
+      \State $N \gets$ Number of iterations
+      \State $\epsilon \gets$ Tolerance
+      \While{$i<N $ and $ \sigma^2 > \epsilon$}
+        \State $\mathbf{X} \gets$ Sample from $\|\Psi_{HF}\|^2$
+        \State $E_{loc}(\mathbf{X}) \gets \frac{He^{T(\mathbf{X})/2}\Psi_{HF}(\mathbf{X})}{e^{T(\mathbf{X})/2}\Psi_{HF}(\mathbf{X})}$
+        \State $\langle E_{loc} \rangle \gets \sum_{i=1}^{K} f_i\bigg(E_{loc}(\mathbf{X})\bigg)$
+        \State $\sigma^2 \gets \bigg\langle \bigg(E_{loc}(\mathbf{X}) - \langle E_{loc} \rangle \bigg)^2 \bigg\rangle$
+        \State \Call{Update Weights}{$u,\ W,\ b$}
+      \EndWhile
+      \State $\Psi_{exact} \gets \sqrt{e^{T(X,u,W,b)}\|\Psi_{HF}\|^2}$
+    \EndProcedure
+    \Statex
+    \Function{Update Weights}{$u,\ W,\ b$}
+      \State $u\gets u -\frac{\partial E}{\partial u}$
+      \State $W\gets W -\frac{\partial E}{\partial W}$
+      \State $b\gets b -\frac{\partial E}{\partial b}$
+      \State \Return $u,\ W,\ b$
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+\subsection{Example}
+Let's consider a 1D simple harmonic oscillator. The ground state can be easily computed analytically.
+\begin{eqnarray*}
+  H &=& -\frac{d^2}{dx^2} + x^2\\
+  \psi(x) &=& \frac{1}{\sqrt{\pi}}e^{-\frac{x^2}{2}}\\
+  E_{GS} &=& 1
+\end{eqnarray*}
+
+The traditional variational monte carlo method is done by considering a trial wavefunction. By minimizing with respect to the parameter $\alpha$, we can get an estimate of the energy, in this case, we start with a good guess so the result is exact.
+\begin{eqnarray*}
+  \psi_{trial}(x) &=& \sqrt{\frac{2a}{\pi}}e^{-ax^2}\\
+  H\psi_{trial}(x) &=& (\alpha^2 + x^2(1-\alpha^4))\psi_{trial}(x)\\
+  \langle E_{loc} \rangle &=& \int dx\ \|\psi_{trial}(x)\|^2 E_{loc}(x) = \frac{\alpha^2}{2}+\frac{1}{2\alpha^2}\\
+  \alpha_{min} &=& \frac{1}{2}
+\end{eqnarray*}
+
+
+
+\subsection{Open Questions}
+\begin{enumerate}
+  \item How do we treat the complex phase of a wavefuntion when  the new scheme involves only the amplitude ?
+  % \item How large should the dimension of $z$ be ? Answer: Its a scalar.
+  \item Can the resulting wavefunction has the following properties ?
+  \begin{itemize}
+    \item Satisfy cusp condition
+    \item Vanishes at large distances
+    \item Antisymmetric under exchange
+  \end{itemize}
+\end{enumerate}
+
+\newpage
+\printbibliography
+
+\end{document}
